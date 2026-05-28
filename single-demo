@@ -1,0 +1,535 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Double Pendulum Lab</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#070b10;
+    --panel:#0d141d;
+    --panel-2:#111b26;
+    --grid:#13301f;
+    --grid-bright:#1d6b3f;
+    --line:#243240;
+    --ink:#cde3d6;
+    --muted:#5f7588;
+    --amber:#ffb347;
+    --cyan:#3fe0d0;
+    --rose:#ff5d73;
+    --total:#e8f0e4;
+    --glow:0 0 8px;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;background:var(--bg);color:var(--ink);
+    font-family:'IBM Plex Sans',sans-serif;}
+  .wrap{max-width:1060px;margin:0 auto;padding:22px 18px 40px;}
+  header{display:flex;align-items:baseline;gap:14px;flex-wrap:wrap;
+    border-bottom:1px solid var(--line);padding-bottom:14px;margin-bottom:20px;}
+  h1{font-size:20px;font-weight:600;letter-spacing:.04em;margin:0;
+    text-transform:uppercase;}
+  h1 b{color:var(--amber);font-weight:600;}
+  .sub{font-family:'IBM Plex Mono',monospace;font-size:11.5px;
+    color:var(--muted);letter-spacing:.02em;}
+  .grid-layout{display:grid;grid-template-columns:1fr 320px;gap:18px;}
+  @media(max-width:860px){.grid-layout{grid-template-columns:1fr;}}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:10px;
+    overflow:hidden;}
+  .stage{position:relative;}
+  canvas{display:block;width:100%;}
+  .badge{position:absolute;top:10px;left:12px;font-family:'IBM Plex Mono',monospace;
+    font-size:10.5px;color:var(--muted);letter-spacing:.08em;text-transform:uppercase;}
+  .badge.r{left:auto;right:12px;text-align:right;}
+
+  /* controls */
+  .panel-pad{padding:16px 16px 18px;}
+  .panel-title{font-family:'IBM Plex Mono',monospace;font-size:10.5px;
+    text-transform:uppercase;letter-spacing:.14em;color:var(--muted);
+    margin:0 0 12px;}
+  .btns{display:flex;gap:8px;margin-bottom:18px;}
+  button{flex:1;font-family:'IBM Plex Mono',monospace;font-size:12px;
+    letter-spacing:.04em;padding:9px 6px;border-radius:7px;cursor:pointer;
+    border:1px solid var(--line);background:var(--panel-2);color:var(--ink);
+    transition:.15s;text-transform:uppercase;}
+  button:hover{border-color:var(--grid-bright);color:#fff;}
+  button.primary{background:var(--amber);border-color:var(--amber);color:#1a1206;
+    font-weight:600;}
+  button.primary:hover{filter:brightness(1.08);}
+  .ctrl{margin-bottom:13px;}
+  .ctrl .row{display:flex;justify-content:space-between;align-items:center;
+    margin-bottom:5px;}
+  .ctrl label{font-size:12.5px;color:var(--ink);}
+  .ctrl .val{font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--muted);}
+  .c1{color:var(--amber);} .c2{color:var(--cyan);}
+  input[type=range]{-webkit-appearance:none;appearance:none;width:100%;height:4px;
+    background:var(--line);border-radius:3px;outline:none;}
+  input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:15px;
+    height:15px;border-radius:50%;background:var(--ink);cursor:pointer;
+    border:3px solid var(--panel);box-shadow:0 0 0 1px var(--grid-bright);}
+  input[type=range]::-moz-range-thumb{width:15px;height:15px;border-radius:50%;
+    background:var(--ink);cursor:pointer;border:3px solid var(--panel);}
+
+  /* readouts */
+  .readout{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:4px;}
+  .rd{background:var(--panel-2);border:1px solid var(--line);border-radius:8px;
+    padding:9px 10px;}
+  .rd .k{font-family:'IBM Plex Mono',monospace;font-size:9.5px;
+    text-transform:uppercase;letter-spacing:.1em;color:var(--muted);}
+  .rd .v{font-family:'IBM Plex Mono',monospace;font-size:15px;margin-top:3px;}
+  .energy-card{margin-top:18px;}
+  .ebar-wrap{padding:14px 16px 16px;}
+  .ebars{display:flex;flex-direction:column;gap:9px;}
+  .ebar{display:flex;align-items:center;gap:10px;font-family:'IBM Plex Mono',monospace;
+    font-size:11px;}
+  .ebar .tag{width:62px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;}
+  .ebar .track{flex:1;height:8px;background:var(--panel-2);border-radius:4px;overflow:hidden;}
+  .ebar .fill{height:100%;width:0%;border-radius:4px;transition:width .08s linear;}
+  .ebar .num{width:54px;text-align:right;color:var(--ink);}
+  .lag-track{position:relative;}
+  .lag-track::before{content:"";position:absolute;left:50%;top:-2px;bottom:-2px;
+    width:1px;background:#3c5a47;}
+  .lag-fill{position:absolute;top:0;bottom:0;background:#f5d76e;border-radius:2px;
+    transition:left .08s linear,width .08s linear;}
+  .legend{display:flex;flex-wrap:wrap;gap:13px;margin:0 0 10px;}
+  .lg{font-family:'IBM Plex Mono',monospace;font-size:10.5px;color:var(--muted);
+    display:flex;align-items:center;gap:6px;}
+  .lg i{width:14px;height:3px;border-radius:2px;display:inline-block;}
+  .foot{font-family:'IBM Plex Mono',monospace;font-size:10.5px;color:var(--muted);
+    margin-top:14px;line-height:1.5;}
+  .toggle{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--muted);
+    cursor:pointer;margin-top:6px;user-select:none;}
+  .toggle input{accent-color:var(--cyan);}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>Double Pendulum</h1>
+  </header>
+
+  <div class="grid-layout">
+    <!-- LEFT: stage + energy chart -->
+    <div>
+      <div class="card stage">
+        <span class="badge">x–y plane · pivot at origin</span>
+        <span class="badge r" id="statusBadge">paused</span>
+        <canvas id="stage" width="700" height="560"></canvas>
+      </div>
+
+      <div class="card energy-card">
+        <div class="ebar-wrap">
+          <p class="panel-title" style="margin-bottom:10px;">Energy vs. time (J)</p>
+          <div class="legend">
+            <span class="lg"><i style="background:var(--rose)"></i>Kinetic&nbsp;T</span>
+            <span class="lg"><i style="background:var(--cyan)"></i>Potential&nbsp;V</span>
+            <span class="lg"><i style="background:#f5d76e"></i>Lagrangian&nbsp;L=T−V</span>
+            <span class="lg"><i style="background:var(--total)"></i>Total&nbsp;E=T+V</span>
+          </div>
+          <canvas id="echart" width="700" height="150"></canvas>
+          <div class="ebars" style="margin-top:14px;">
+            <div class="ebar"><span class="tag" style="color:var(--rose)">Kinetic</span>
+              <div class="track"><div class="fill" id="keFill" style="background:var(--rose)"></div></div>
+              <span class="num" id="keNum">0.00</span></div>
+            <div class="ebar"><span class="tag" style="color:var(--cyan)">Potential</span>
+              <div class="track"><div class="fill" id="peFill" style="background:var(--cyan)"></div></div>
+              <span class="num" id="peNum">0.00</span></div>
+            <div class="ebar"><span class="tag" style="color:var(--total)">Total</span>
+              <div class="track"><div class="fill" id="teFill" style="background:var(--total)"></div></div>
+              <span class="num" id="teNum">0.00</span></div>
+            <div class="ebar"><span class="tag" style="color:#f5d76e">Lagr. L</span>
+              <div class="track lag-track"><div class="fill lag-fill" id="lagFill"></div></div>
+              <span class="num" id="lagNum">0.00</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- RIGHT: controls -->
+    <div>
+      <div class="card panel-pad">
+        <div class="btns">
+          <button class="primary" id="playBtn">Release</button>
+          <button id="pauseBtn">Pause</button>
+          <button id="resetBtn">Reset</button>
+        </div>
+
+        <p class="panel-title">Initial angles (from vertical)</p>
+        <div class="ctrl">
+          <div class="row"><label class="c1">θ₁ — upper</label><span class="val" id="a1v">120°</span></div>
+          <input type="range" id="a1" min="-180" max="180" value="120">
+        </div>
+        <div class="ctrl">
+          <div class="row"><label class="c2">θ₂ — lower</label><span class="val" id="a2v">-10°</span></div>
+          <input type="range" id="a2" min="-180" max="180" value="-10">
+        </div>
+
+        <p class="panel-title" style="margin-top:18px;">Arm lengths &amp; masses</p>
+        <div class="ctrl">
+          <div class="row"><label class="c1">L₁</label><span class="val" id="l1v">1.00 m</span></div>
+          <input type="range" id="l1" min="0.4" max="1.4" step="0.01" value="1.0">
+        </div>
+        <div class="ctrl">
+          <div class="row"><label class="c2">L₂</label><span class="val" id="l2v">1.00 m</span></div>
+          <input type="range" id="l2" min="0.4" max="1.4" step="0.01" value="1.0">
+        </div>
+        <div class="ctrl">
+          <div class="row"><label class="c1">m₁</label><span class="val" id="m1v">1.0 kg</span></div>
+          <input type="range" id="m1" min="0.3" max="3" step="0.1" value="1.0">
+        </div>
+        <div class="ctrl">
+          <div class="row"><label class="c2">m₂</label><span class="val" id="m2v">1.0 kg</span></div>
+          <input type="range" id="m2" min="0.3" max="3" step="0.1" value="1.0">
+        </div>
+
+        <p class="panel-title" style="margin-top:18px;">Environment</p>
+        <div class="ctrl">
+          <div class="row"><label>Gravity</label><span class="val" id="gv">9.81 m/s²</span></div>
+          <input type="range" id="g" min="0" max="20" step="0.01" value="9.81">
+        </div>
+        <div class="ctrl">
+          <div class="row"><label>Damping</label><span class="val" id="dv">0.000</span></div>
+          <input type="range" id="d" min="0" max="0.6" step="0.005" value="0">
+        </div>
+        <div class="ctrl">
+          <div class="row"><label>Sim speed</label><span class="val" id="spv">1.0×</span></div>
+          <input type="range" id="sp" min="0.1" max="2.5" step="0.05" value="1.0">
+        </div>
+
+        <label class="toggle"><input type="checkbox" id="trailChk" checked> show trail of lower bob</label>
+      </div>
+
+      <div class="card panel-pad" style="margin-top:18px;">
+        <p class="panel-title">Lower-bob position</p>
+        <div class="readout">
+          <div class="rd"><div class="k">x</div><div class="v" id="rx">0.00 m</div></div>
+          <div class="rd"><div class="k">y</div><div class="v" id="ry">0.00 m</div></div>
+          <div class="rd"><div class="k">displacement from rest</div><div class="v" id="rdisp">0.00 m</div></div>
+          <div class="rd"><div class="k">speed</div><div class="v" id="rspd">0.00 m/s</div></div>
+        </div>
+        <p class="foot">"Rest" = the position the lower bob would hang straight down.
+        The faint marker shows it. Total energy stays flat with zero damping —
+        watch the white line in the chart hold steady even as the motion goes chaotic.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ---------- elements ----------
+const stage = document.getElementById('stage');
+const sx = stage.getContext('2d');
+const echart = document.getElementById('echart');
+const ex = echart.getContext('2d');
+
+const els = id => document.getElementById(id);
+const a1=els('a1'),a2=els('a2'),l1=els('l1'),l2=els('l2'),m1=els('m1'),m2=els('m2'),
+      g=els('g'),d=els('d'),sp=els('sp'),trailChk=els('trailChk');
+
+// ---------- state ----------
+let P = { t1:0, w1:0, t2:0, w2:0 };   // angles (rad from downward vertical) & angular vel
+let params = { L1:1, L2:1, M1:1, M2:1, G:9.81, DAMP:0, SPEED:1 };
+let running = false;
+let trail = [];
+let ehist = [];          // {t,ke,pe,te}
+let simТime = 0;
+const D2R = Math.PI/180, R2D = 180/Math.PI;
+
+// ---------- physics: derivatives for RK4 ----------
+function deriv(s){
+  const {t1,w1,t2,w2} = s;
+  const {L1,L2,M1,M2,G,DAMP} = params;
+  const del = t1 - t2;
+  const cd = Math.cos(del), sd = Math.sin(del);
+  const den = (2*M1 + M2 - M2*Math.cos(2*t1 - 2*t2));
+
+  const a1 = ( -G*(2*M1+M2)*Math.sin(t1)
+               - M2*G*Math.sin(t1-2*t2)
+               - 2*sd*M2*(w2*w2*L2 + w1*w1*L1*cd) ) / (L1*den)
+             - DAMP*w1;
+
+  const a2 = ( 2*sd*( w1*w1*L1*(M1+M2)
+               + G*(M1+M2)*Math.cos(t1)
+               + w2*w2*L2*M2*cd ) ) / (L2*den)
+             - DAMP*w2;
+
+  return { t1:w1, w1:a1, t2:w2, w2:a2 };
+}
+function rk4(s,h){
+  const k1=deriv(s);
+  const s2={t1:s.t1+k1.t1*h/2,w1:s.w1+k1.w1*h/2,t2:s.t2+k1.t2*h/2,w2:s.w2+k1.w2*h/2};
+  const k2=deriv(s2);
+  const s3={t1:s.t1+k2.t1*h/2,w1:s.w1+k2.w1*h/2,t2:s.t2+k2.t2*h/2,w2:s.w2+k2.w2*h/2};
+  const k3=deriv(s3);
+  const s4={t1:s.t1+k3.t1*h,w1:s.w1+k3.w1*h,t2:s.t2+k3.t2*h,w2:s.w2+k3.w2*h};
+  const k4=deriv(s4);
+  return {
+    t1:s.t1+h/6*(k1.t1+2*k2.t1+2*k3.t1+k4.t1),
+    w1:s.w1+h/6*(k1.w1+2*k2.w1+2*k3.w1+k4.w1),
+    t2:s.t2+h/6*(k1.t2+2*k2.t2+2*k3.t2+k4.t2),
+    w2:s.w2+h/6*(k1.w2+2*k2.w2+2*k3.w2+k4.w2),
+  };
+}
+
+// ---------- energy ----------
+function energy(){
+  const {L1,L2,M1,M2,G}=params; const {t1,w1,t2,w2}=P;
+  const v1sq = (L1*w1)*(L1*w1);
+  const v2sq = L1*L1*w1*w1 + L2*L2*w2*w2 + 2*L1*L2*w1*w2*Math.cos(t1-t2);
+  const KE = 0.5*M1*v1sq + 0.5*M2*v2sq;
+  // PE measured from the lowest (rest) configuration so it reads >= 0
+  const PE = (M1+M2)*G*L1*(1-Math.cos(t1)) + M2*G*L2*(1-Math.cos(t2));
+  return {KE,PE,TE:KE+PE,LAG:KE-PE};
+}
+
+// ---------- coordinate helpers ----------
+const PXM = 130;                  // pixels per metre
+function pivot(){ return {x: stage.width/2, y: stage.height*0.30}; }
+function bobPositions(){
+  const {L1,L2}=params; const {t1,t2}=P;
+  const x1 =  L1*Math.sin(t1),  y1 =  L1*Math.cos(t1);
+  const x2 = x1 + L2*Math.sin(t2), y2 = y1 + L2*Math.cos(t2);
+  return {x1,y1,x2,y2};
+}
+
+// ---------- drawing ----------
+function drawGrid(){
+  const w=stage.width,h=stage.height,pv=pivot();
+  sx.fillStyle='#070b10'; sx.fillRect(0,0,w,h);
+  // fine grid every 0.25 m
+  sx.lineWidth=1;
+  const step=PXM*0.25;
+  sx.strokeStyle='#11261a';
+  sx.beginPath();
+  for(let x=pv.x%step;x<w;x+=step){sx.moveTo(x,0);sx.lineTo(x,h);}
+  for(let y=pv.y%step;y<h;y+=step){sx.moveTo(0,y);sx.lineTo(w,y);}
+  sx.stroke();
+  // major grid every 1 m
+  sx.strokeStyle='#173a26';
+  sx.beginPath();
+  for(let x=pv.x%(PXM);x<w;x+=PXM){sx.moveTo(x,0);sx.lineTo(x,h);}
+  for(let y=pv.y%(PXM);y<h;y+=PXM){sx.moveTo(0,y);sx.lineTo(w,y);}
+  sx.stroke();
+  // axes through pivot
+  sx.strokeStyle='#1d6b3f'; sx.lineWidth=1.3;
+  sx.beginPath();
+  sx.moveTo(0,pv.y); sx.lineTo(w,pv.y);
+  sx.moveTo(pv.x,0); sx.lineTo(pv.x,h);
+  sx.stroke();
+  // tick labels
+  sx.fillStyle='#3c5a47'; sx.font="10px 'IBM Plex Mono',monospace";
+  for(let m=-2;m<=2;m++){ if(m===0)continue;
+    sx.fillText(m+'', pv.x+m*PXM-4, pv.y-6);
+    sx.fillText(m+'', pv.x+5, pv.y+m*PXM+3);
+  }
+}
+
+function drawPendulum(){
+  const pv=pivot(); const {x1,y1,x2,y2}=bobPositions();
+  const p1={x:pv.x+x1*PXM, y:pv.y+y1*PXM};
+  const p2={x:pv.x+x2*PXM, y:pv.y+y2*PXM};
+
+  // rest marker for lower bob (straight down)
+  const rest={x:pv.x, y:pv.y+(params.L1+params.L2)*PXM};
+  sx.strokeStyle='#274a36'; sx.setLineDash([3,4]); sx.lineWidth=1;
+  sx.beginPath(); sx.arc(rest.x,rest.y,Math.max(4,params.M2*4),0,7); sx.stroke();
+  sx.setLineDash([]);
+
+  // trail
+  if(trailChk.checked && trail.length>1){
+    for(let i=1;i<trail.length;i++){
+      const a=i/trail.length;
+      sx.strokeStyle='rgba(63,224,208,'+(a*0.55)+')';
+      sx.lineWidth=1.6;
+      sx.beginPath();
+      sx.moveTo(pv.x+trail[i-1].x*PXM, pv.y+trail[i-1].y*PXM);
+      sx.lineTo(pv.x+trail[i].x*PXM, pv.y+trail[i].y*PXM);
+      sx.stroke();
+    }
+  }
+
+  // rods
+  sx.lineCap='round';
+  sx.strokeStyle='rgba(255,179,71,.9)'; sx.lineWidth=3;
+  sx.beginPath(); sx.moveTo(pv.x,pv.y); sx.lineTo(p1.x,p1.y); sx.stroke();
+  sx.strokeStyle='rgba(63,224,208,.9)';
+  sx.beginPath(); sx.moveTo(p1.x,p1.y); sx.lineTo(p2.x,p2.y); sx.stroke();
+
+  // pivot
+  sx.fillStyle='#cde3d6'; sx.beginPath(); sx.arc(pv.x,pv.y,4,0,7); sx.fill();
+
+  // bobs (radius scales mildly with mass)
+  const r1=6+params.M1*3, r2=6+params.M2*3;
+  sx.shadowColor='#ffb347'; sx.shadowBlur=14;
+  sx.fillStyle='#ffb347'; sx.beginPath(); sx.arc(p1.x,p1.y,r1,0,7); sx.fill();
+  sx.shadowColor='#3fe0d0';
+  sx.fillStyle='#3fe0d0'; sx.beginPath(); sx.arc(p2.x,p2.y,r2,0,7); sx.fill();
+  sx.shadowBlur=0;
+}
+
+function roundRect(c,x,y,w,h,r){
+  c.beginPath(); c.moveTo(x+r,y);
+  c.arcTo(x+w,y,x+w,y+h,r); c.arcTo(x+w,y+h,x,y+h,r);
+  c.arcTo(x,y+h,x,y,r); c.arcTo(x,y,x+w,y,r); c.closePath();
+}
+
+// small live energy graph drawn in the top-left of the x-y plane
+function drawMiniEnergy(){
+  const bx=12,by=30,bw=168,bh=92;
+  sx.fillStyle='rgba(7,11,16,.84)'; sx.strokeStyle='#1d3a29'; sx.lineWidth=1;
+  roundRect(sx,bx,by,bw,bh,7); sx.fill(); sx.stroke();
+  sx.fillStyle='#5f7588'; sx.font="9px 'IBM Plex Mono',monospace";
+  sx.fillText('ENERGY · J',bx+9,by+14);
+  sx.fillStyle='#ff5d73'; sx.fillText('T',bx+74,by+14);
+  sx.fillStyle='#3fe0d0'; sx.fillText('V',bx+90,by+14);
+  sx.fillStyle='#f5d76e'; sx.fillText('L',bx+106,by+14);
+  sx.fillStyle='#e8f0e4'; sx.fillText('E',bx+122,by+14);
+  const px=bx+9,py=by+22,pw=bw-18,ph=bh-32;
+  if(ehist.length<2) return;
+  const slice=ehist.slice(Math.max(0,ehist.length-180));
+  let mx=-1e9,mn=1e9;
+  for(const e of slice){mx=Math.max(mx,e.te,e.ke,e.pe,e.lag);mn=Math.min(mn,e.te,e.ke,e.pe,e.lag);}
+  if(mn>0)mn=0; const rg=(mx-mn)||1;
+  const Y=v=>py+ph-((v-mn)/rg)*ph; const N=slice.length;
+  // zero line
+  sx.strokeStyle='#243f30'; sx.setLineDash([3,3]); sx.beginPath();
+  sx.moveTo(px,Y(0)); sx.lineTo(px+pw,Y(0)); sx.stroke(); sx.setLineDash([]);
+  const mplot=(key,color)=>{
+    sx.strokeStyle=color; sx.lineWidth=1.2; sx.beginPath();
+    for(let i=0;i<N;i++){const x=px+i/(N-1)*pw,y=Y(slice[i][key]); i?sx.lineTo(x,y):sx.moveTo(x,y);}
+    sx.stroke();
+  };
+  mplot('pe','#3fe0d0'); mplot('ke','#ff5d73'); mplot('lag','#f5d76e'); mplot('te','#e8f0e4');
+}
+
+function drawEnergyChart(){
+  const w=echart.width,h=echart.height;
+  ex.fillStyle='#0d141d'; ex.fillRect(0,0,w,h);
+  if(ehist.length<2) return;
+  let maxE=-1e9,minE=1e9;
+  for(const e of ehist){
+    maxE=Math.max(maxE,e.te,e.ke,e.pe,e.lag);
+    minE=Math.min(minE,e.te,e.ke,e.pe,e.lag);
+  }
+  if(minE>0) minE=0;
+  const span=(maxE-minE)||1; maxE+=span*0.08; minE-=span*0.08;
+  const range=maxE-minE;
+  const Y=v=> h-((v-minE)/range)*h;
+  // faint gridlines
+  ex.strokeStyle='#1a2b22'; ex.lineWidth=1; ex.beginPath();
+  for(let i=1;i<4;i++){ex.moveTo(0,h*i/4);ex.lineTo(w,h*i/4);} ex.stroke();
+  // zero baseline (matters now that the Lagrangian dips negative)
+  const zy=Y(0);
+  ex.strokeStyle='#2c4738'; ex.setLineDash([4,4]);
+  ex.beginPath(); ex.moveTo(0,zy); ex.lineTo(w,zy); ex.stroke(); ex.setLineDash([]);
+  ex.fillStyle='#3c5a47'; ex.font="9px 'IBM Plex Mono',monospace"; ex.fillText('0',3,zy-3);
+  const N=ehist.length;
+  const plot=(key,color,glow)=>{
+    ex.strokeStyle=color; ex.lineWidth=glow?1.8:1.3;
+    if(glow){ex.shadowColor=color;ex.shadowBlur=6;}
+    ex.beginPath();
+    for(let i=0;i<N;i++){
+      const x=i/(N-1)*w, y=Y(ehist[i][key]);
+      i?ex.lineTo(x,y):ex.moveTo(x,y);
+    }
+    ex.stroke(); ex.shadowBlur=0;
+  };
+  plot('pe','#3fe0d0',false);
+  plot('ke','#ff5d73',false);
+  plot('lag','#f5d76e',false);
+  plot('te','#e8f0e4',true);
+}
+
+// ---------- readouts ----------
+function updateReadouts(){
+  const {x2,y2}=bobPositions();
+  const {L1,L2}=params;
+  els('rx').textContent = x2.toFixed(2)+' m';
+  els('ry').textContent = (-y2).toFixed(2)+' m';     // up = positive for display
+  const restX=0, restY=L1+L2;
+  const disp=Math.hypot(x2-restX, y2-restY);
+  els('rdisp').textContent = disp.toFixed(2)+' m';
+  // speed of lower bob
+  const {t1,w1,t2,w2}=P;
+  const vx = L1*w1*Math.cos(t1)+L2*w2*Math.cos(t2);
+  const vy = -L1*w1*Math.sin(t1)-L2*w2*Math.sin(t2);
+  els('rspd').textContent = Math.hypot(vx,vy).toFixed(2)+' m/s';
+
+  const {KE,PE,TE,LAG}=energy();
+  const m=Math.max(TE,0.0001);
+  els('keNum').textContent=KE.toFixed(2); els('keFill').style.width=(KE/m*100)+'%';
+  els('peNum').textContent=PE.toFixed(2); els('peFill').style.width=(PE/m*100)+'%';
+  els('teNum').textContent=TE.toFixed(2); els('teFill').style.width='100%';
+  els('lagNum').textContent=LAG.toFixed(2);
+  // bipolar bar for L: anchored at 50%, grows right if positive, left if negative
+  const lagPct = Math.min(50, Math.abs(LAG)/m * 50);
+  const lagFill = els('lagFill');
+  if(LAG>=0){ lagFill.style.left='50%'; lagFill.style.width=lagPct+'%'; }
+  else      { lagFill.style.left=(50-lagPct)+'%'; lagFill.style.width=lagPct+'%'; }
+}
+
+// ---------- main loop ----------
+let last=performance.now();
+function frame(now){
+  let dt=(now-last)/1000; last=now;
+  if(dt>0.05)dt=0.05;
+  if(running){
+    const h=0.003;
+    let acc=dt*params.SPEED;
+    let stepsLeft=2000;
+    while(acc>=h && stepsLeft-- > 0){
+      P=rk4(P,h); simТime+=h; acc-=h;
+    }
+    const {x2,y2}=bobPositions();
+    trail.push({x:x2,y:y2});
+    if(trail.length>900) trail.shift();
+    const e=energy();
+    ehist.push({t:simТime,ke:e.KE,pe:e.PE,te:e.TE,lag:e.LAG});
+    if(ehist.length>700) ehist.shift();
+  }
+  drawGrid(); drawPendulum(); drawMiniEnergy(); drawEnergyChart(); updateReadouts();
+  requestAnimationFrame(frame);
+}
+
+// ---------- controls ----------
+function syncParams(){
+  params.L1=+l1.value; params.L2=+l2.value;
+  params.M1=+m1.value; params.M2=+m2.value;
+  params.G=+g.value;   params.DAMP=+d.value; params.SPEED=+sp.value;
+  els('l1v').textContent=(+l1.value).toFixed(2)+' m';
+  els('l2v').textContent=(+l2.value).toFixed(2)+' m';
+  els('m1v').textContent=(+m1.value).toFixed(1)+' kg';
+  els('m2v').textContent=(+m2.value).toFixed(1)+' kg';
+  els('gv').textContent=(+g.value).toFixed(2)+' m/s²';
+  els('dv').textContent=(+d.value).toFixed(3);
+  els('spv').textContent=(+sp.value).toFixed(1)+'×';
+}
+function setAnglesFromSliders(){
+  P.t1=+a1.value*D2R; P.t2=+a2.value*D2R; P.w1=0; P.w2=0;
+  els('a1v').textContent=a1.value+'°';
+  els('a2v').textContent=a2.value+'°';
+}
+function setStatus(s){els('statusBadge').textContent=s;}
+
+[l1,l2,m1,m2,g,d,sp].forEach(s=>s.addEventListener('input',syncParams));
+[a1,a2].forEach(s=>s.addEventListener('input',()=>{
+  // dragging angle sliders re-poses the (paused) pendulum and clears history
+  setAnglesFromSliders();
+  if(!running){ trail=[]; ehist=[]; simТime=0; }
+}));
+
+els('playBtn').onclick=()=>{ running=true; last=performance.now(); setStatus('running'); };
+els('pauseBtn').onclick=()=>{ running=false; setStatus('paused'); };
+els('resetBtn').onclick=()=>{
+  running=false; setStatus('paused');
+  setAnglesFromSliders(); trail=[]; ehist=[]; simТime=0;
+};
+
+// ---------- init ----------
+syncParams(); setAnglesFromSliders();
+requestAnimationFrame(frame);
+</script>
+</body>
+</html>
